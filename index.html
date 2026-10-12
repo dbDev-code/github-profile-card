@@ -62,7 +62,6 @@
         </button>
         <!-- Token 面板：静态页无法走 OAuth，这里给预填好的创建入口并就地校验 -->
         <div id="tokenPanel" class="hidden fixed z-20 left-4 right-4 top-24 w-auto p-3 rounded-xl border border-neutral-200/80 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.06)] space-y-2 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72">
-          <p data-i18n="tokenHint" class="text-[11px] leading-relaxed text-neutral-500"></p>
           <a id="tokenCreateLink" href="https://github.com/settings/tokens/new?description=github-profile-card" target="_blank" rel="noopener noreferrer" data-i18n="tokenCreate" class="block text-xs text-neutral-900 underline underline-offset-2"></a>
           <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" data-i18n-placeholder="tokenPlaceholder" placeholder="粘贴 Token（ghp_… / github_pat_…）" class="w-full px-2.5 py-2 text-xs bg-neutral-50 border border-neutral-200/90 rounded-lg text-neutral-900 focus:outline-none focus:border-neutral-400" />
           <div class="flex items-center gap-2">
@@ -149,6 +148,11 @@
               <span id="joinedDateText">加入于 2017-01-15 00:00:00</span>
             </span>
             <span id="joinedDurationText" class="text-xs text-neutral-500 bg-neutral-50 px-2 py-0.5 rounded-md border border-neutral-200/60">已加入 8 年 · 共 2,926 天</span>
+            <!-- 分享当前名片链接 -->
+            <button id="shareBtn" class="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 bg-neutral-50 hover:bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200/60 transition-colors">
+              <i data-lucide="share-2" class="w-3.5 h-3.5 text-neutral-400"></i>
+              <span id="shareLabel" data-i18n="share">分享</span>
+            </button>
           </div>
 
           <p id="bio" class="text-sm text-neutral-600 mt-3 leading-relaxed break-words"></p>

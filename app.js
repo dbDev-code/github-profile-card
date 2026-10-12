@@ -8,7 +8,6 @@ const I18N = {
     recent: '最近查询',
     clearHistory: '清空',
     removeHistory: '删除这条记录',
-    tokenHint: '纯静态页面无法使用 OAuth（换 token 需要后端保管 client_secret），请创建一个不勾选任何权限的 Token —— 读取公开数据不需要权限，额度会从 60 次/小时提高到 5000 次/小时。',
     tokenCreate: '打开 GitHub 创建 Token →',
     tokenPlaceholder: '粘贴 Token（ghp_… / github_pat_…）',
     tokenSave: '保存',
@@ -16,6 +15,10 @@ const I18N = {
     tokenAnon: '当前：匿名（60 次/小时）',
     tokenOk: '当前：已连接（{0} 次/小时）',
     tokenInvalid: 'Token 无效，未保存',
+    share: '分享',
+    copied: '已复制',
+    copyFailed: '复制失败',
+    copyManually: '复制这个链接：',
     statRepos: '公开仓库',
     statFollowers: '关注者',
     statFollowing: '正在关注',
@@ -62,7 +65,6 @@ const I18N = {
     recent: 'Recent',
     clearHistory: 'Clear',
     removeHistory: 'Remove this entry',
-    tokenHint: 'A static page cannot use OAuth (exchanging the code requires a backend holding the client_secret). Create a token without any scopes — public data needs none — and your limit goes from 60/hour to 5000/hour.',
     tokenCreate: 'Create a token on GitHub →',
     tokenPlaceholder: 'Paste token (ghp_… / github_pat_…)',
     tokenSave: 'Save',
@@ -70,6 +72,10 @@ const I18N = {
     tokenAnon: 'Current: anonymous (60/hour)',
     tokenOk: 'Current: connected ({0}/hour)',
     tokenInvalid: 'Invalid token, not saved',
+    share: 'Share',
+    copied: 'Copied',
+    copyFailed: 'Copy failed',
+    copyManually: 'Copy this link:',
     statRepos: 'Public repos',
     statFollowers: 'Followers',
     statFollowing: 'Following',
@@ -617,6 +623,60 @@ document.getElementById('searchForm').addEventListener('submit', (e) => {
   if (val) fetchUserData(val);
 });
 
+// 分享：优先进系统分享面板，退回复制链接
+function profileLink() {
+  const login = currentProfile ? currentProfile.user.login : '';
+  return `${location.href.split('#')[0]}#${login}`;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    // 非安全上下文（如 file://）或权限被拒时的兜底
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e2) {
+      return false;
+    }
+  }
+}
+
+let shareLabelTimer = null;
+function flashShareLabel(text) {
+  const label = document.getElementById('shareLabel');
+  label.textContent = text;
+  clearTimeout(shareLabelTimer);
+  shareLabelTimer = setTimeout(() => { label.textContent = t('share'); }, 1600);
+}
+
+async function shareProfile() {
+  const url = profileLink();
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: t('appTitle'), url });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // 用户自己取消了
+    }
+  }
+  if (await copyText(url)) {
+    flashShareLabel(t('copied'));
+  } else {
+    flashShareLabel(t('copyFailed'));
+    prompt(t('copyManually'), url);
+  }
+}
+
 // Token 面板：打开/关闭、保存、清除
 const tokenPanel = document.getElementById('tokenPanel');
 const tokenInput = document.getElementById('tokenInput');
@@ -648,6 +708,9 @@ document.addEventListener('click', (e) => {
   if (tokenPanel.contains(e.target) || document.getElementById('tokenBtn').contains(e.target)) return;
   tokenPanel.classList.add('hidden');
 });
+
+// 分享按钮
+document.getElementById('shareBtn').addEventListener('click', shareProfile);
 
 // 最近查询：清空
 document.getElementById('clearHistoryBtn').addEventListener('click', () => {
