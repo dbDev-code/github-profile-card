@@ -10,9 +10,25 @@ const I18N = {
     statFollowers: '关注者',
     statFollowing: '正在关注',
     statGists: '代码片段 (Gists)',
+    overviewTitle: '账号总览',
+    ovLanguages: '语言分布',
+    ovStars: 'Star 排行',
+    ovCreated: '每年新建仓库',
+    ovOther: '其他',
+    ovNoLang: '无主语言',
+    ovNote: '基于最近 {0} 个仓库',
+    ovTotalStars: '合计 {0} stars',
+    ovTotalForks: '{0} forks',
+    ovSplit: '原创 {0} · Fork {1}',
+    ovLicense: '主要协议 {0}',
     recentRepos: '最新活跃仓库',
     footer: '使用 GitHub 公开数据',
     apiToken: 'API Token',
+    badgeHireable: '正在找工作',
+    badgeOrg: '组织',
+    badgeStaff: 'GitHub 员工',
+    userId: '用户 ID {0}',
+    profileUpdatedAt: '资料更新于 {0}',
     langBtn: 'EN',
     rateLeft: '剩余 {0}/{1}',
     joinedAt: '加入于 {0}',
@@ -41,9 +57,25 @@ const I18N = {
     statFollowers: 'Followers',
     statFollowing: 'Following',
     statGists: 'Gists',
+    overviewTitle: 'Account overview',
+    ovLanguages: 'Languages',
+    ovStars: 'Top by stars',
+    ovCreated: 'Repos created per year',
+    ovOther: 'Other',
+    ovNoLang: 'No language',
+    ovNote: 'Based on the latest {0} repos',
+    ovTotalStars: '{0} stars in total',
+    ovTotalForks: '{0} forks',
+    ovSplit: '{0} original · {1} forked',
+    ovLicense: 'Main license {0}',
     recentRepos: 'Recently updated repos',
     footer: 'Data from the public GitHub API',
     apiToken: 'API Token',
+    badgeHireable: 'Open to work',
+    badgeOrg: 'Organization',
+    badgeStaff: 'GitHub Staff',
+    userId: 'User ID {0}',
+    profileUpdatedAt: 'Profile updated {0}',
     langBtn: '中文',
     rateLeft: '{0}/{1} left',
     joinedAt: 'Joined {0}',
@@ -167,12 +199,18 @@ function refreshIcons() {
   }
 }
 
-// 加入日期：精确到时分秒
-function formatJoinedDateTime(isoString) {
+// 日期时间：YYYY-MM-DD HH:mm:ss（本地时区）
+function formatDateTime(isoString) {
   if (!isoString) return '';
   const d = new Date(isoString);
   const p = (n) => String(n).padStart(2, '0');
-  return t('joinedAt', `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// 加入日期：精确到时分秒
+function formatJoinedDateTime(isoString) {
+  if (!isoString) return '';
+  return t('joinedAt', formatDateTime(isoString));
 }
 
 // 加入时长：换算年限 + 总天数
@@ -211,6 +249,22 @@ function getHeaders() {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
+}
+
+// 只保留渲染与图表用得到的字段，缓存体积可控（原始对象里大量 *_url 是没用上的）
+function slimRepo(repo) {
+  return {
+    name: repo.name,
+    description: repo.description,
+    language: repo.language,
+    stargazers_count: repo.stargazers_count,
+    forks_count: repo.forks_count,
+    html_url: repo.html_url,
+    created_at: repo.created_at,
+    updated_at: repo.updated_at,
+    fork: repo.fork,
+    license: repo.license,
+  };
 }
 
 // 获取并展示用户数据
@@ -255,8 +309,9 @@ async function fetchUserData(username) {
     const user = await userRes.json();
 
     // 获取该用户前 4 个最新更新的仓库
-    const repoRes = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=4`, { headers });
-    const repos = repoRes.ok ? await repoRes.json() : [];
+    // 该用户最新更新的仓库（一次最多 100 个，账号总览复用这份数据）
+    const repoRes = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=100`, { headers });
+    const repos = repoRes.ok ? (await repoRes.json()).map(slimRepo) : [];
     updateRateLimit(repoRes.headers);
 
     renderProfile(user, repos);
@@ -280,13 +335,13 @@ function renderProfile(user, repos) {
   document.getElementById('username').textContent = `@${user.login}`;
   document.getElementById('profileLink').href = user.html_url;
 
-  // 雇佣状态
+  // 身份徽章：接活 / 组织 / GitHub 员工
   const hireableBadge = document.getElementById('hireableBadge');
-  if (user.hireable) {
-    hireableBadge.classList.remove('hidden');
-  } else {
-    hireableBadge.classList.add('hidden');
-  }
+  hireableBadge.classList.toggle('hidden', !user.hireable);
+  const typeBadge = document.getElementById('typeBadge');
+  typeBadge.classList.toggle('hidden', user.type !== 'Organization');
+  const staffBadge = document.getElementById('staffBadge');
+  staffBadge.classList.toggle('hidden', !user.site_admin);
 
   // 加入时间（精确到秒）与加入时长分开展示
   document.getElementById('joinedDateText').textContent = formatJoinedDateTime(user.created_at);
@@ -310,6 +365,19 @@ function renderProfile(user, repos) {
   // 附加属性设置
   renderMetaItem('metaCompany', 'metaCompanyText', user.company);
   renderMetaItem('metaLocation', 'metaLocationText', user.location);
+  renderMetaItem('metaUserId', 'metaUserIdText', user.id ? t('userId', user.id) : '');
+  renderMetaItem('metaUpdatedAt', 'metaUpdatedAtText', user.updated_at ? t('profileUpdatedAt', formatDateTime(user.updated_at)) : '');
+
+  // 公开邮箱（多数用户没填，为空就隐藏）
+  const emailEl = document.getElementById('metaEmail');
+  if (user.email) {
+    const emailLink = document.getElementById('metaEmailLink');
+    emailLink.href = `mailto:${user.email}`;
+    emailLink.textContent = user.email;
+    emailEl.classList.remove('hidden');
+  } else {
+    emailEl.classList.add('hidden');
+  }
 
   const blogEl = document.getElementById('metaBlog');
   if (user.blog) {
@@ -332,12 +400,16 @@ function renderProfile(user, repos) {
     twitterEl.classList.add('hidden');
   }
 
-  // 仓库列表渲染
+  // 账号总览：由这份仓库列表聚合，不额外发请求
+  renderOverview(repos);
+
+  // 仓库列表渲染（卡片只展示最前面的 4 个）
   const repoContainer = document.getElementById('repoList');
   repoContainer.innerHTML = '';
+  const topRepos = repos ? repos.slice(0, 4) : [];
 
-  if (repos && repos.length > 0) {
-    repos.forEach(repo => {
+  if (topRepos.length > 0) {
+    topRepos.forEach(repo => {
       const card = document.createElement('a');
       card.href = repo.html_url;
       card.target = '_blank';
@@ -366,6 +438,94 @@ function renderProfile(user, repos) {
   }
 
   document.getElementById('profileCard').classList.remove('hidden');
+}
+
+// 账号总览：语言分布 / Star 排行 / 每年新建仓库 + 汇总数字
+function renderOverview(repos) {
+  const block = document.getElementById('overviewBlock');
+  if (!repos || !repos.length) {
+    block.classList.add('hidden');
+    return;
+  }
+  block.classList.remove('hidden');
+  document.getElementById('overviewNote').textContent = t('ovNote', repos.length);
+
+  const langCount = {};
+  const yearCount = {};
+  const licenseCount = {};
+  let stars = 0, forks = 0, original = 0, forked = 0;
+
+  repos.forEach(repo => {
+    const lang = repo.language || t('ovNoLang');
+    langCount[lang] = (langCount[lang] || 0) + 1;
+    const year = new Date(repo.created_at).getFullYear();
+    yearCount[year] = (yearCount[year] || 0) + 1;
+    stars += repo.stargazers_count || 0;
+    forks += repo.forks_count || 0;
+    if (repo.fork) { forked++; } else { original++; }
+    if (repo.license) {
+      const key = repo.license.spdx_id || repo.license.name;
+      licenseCount[key] = (licenseCount[key] || 0) + 1;
+    }
+  });
+
+  const top = (obj, n) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
+
+  // 语言取 Top5，剩下的合并成"其他"，让分布合计能对上总数
+  const langEntries = top(langCount, 5);
+  const restCount = repos.length - langEntries.reduce((sum, e) => sum + e[1], 0);
+  if (restCount > 0) langEntries.push([t('ovOther'), restCount]);
+
+  renderBars('ovLanguages', langEntries);
+  renderBars('ovStars', repos.map(r => [r.name, r.stargazers_count || 0]).sort((a, b) => b[1] - a[1]).slice(0, 5));
+  renderBars('ovCreated', Object.entries(yearCount).sort((a, b) => a[0] - b[0]));
+  renderOverviewTotals(stars, forks, original, forked, top(licenseCount, 1)[0]);
+}
+
+// 画一组横向条形：entries 为 [[名称, 数值], ...]
+function renderBars(containerId, entries) {
+  const box = document.getElementById(containerId);
+  box.innerHTML = '';
+  const max = Math.max(...entries.map(e => e[1]), 1);
+  entries.forEach(([label, value]) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+
+    const name = document.createElement('span');
+    name.className = 'w-20 shrink-0 truncate text-[11px] text-neutral-500';
+    name.textContent = label;
+    name.title = label;
+
+    const track = document.createElement('span');
+    track.className = 'flex-1 h-1.5 rounded-full bg-neutral-100 overflow-hidden';
+    const fill = document.createElement('span');
+    fill.className = 'block h-full rounded-full bg-neutral-800';
+    fill.style.width = Math.max(2, Math.round((value / max) * 100)) + '%';
+    track.appendChild(fill);
+
+    const num = document.createElement('span');
+    num.className = 'w-12 shrink-0 text-right text-[11px] text-neutral-400 font-mono';
+    num.textContent = value.toLocaleString();
+
+    row.append(name, track, num);
+    box.appendChild(row);
+  });
+}
+
+function renderOverviewTotals(stars, forks, original, forked, mainLicense) {
+  const box = document.getElementById('ovTotals');
+  box.innerHTML = '';
+  const parts = [
+    t('ovTotalStars', stars.toLocaleString()),
+    t('ovTotalForks', forks.toLocaleString()),
+    t('ovSplit', original, forked),
+    mainLicense ? t('ovLicense', mainLicense[0]) : '',
+  ];
+  parts.filter(Boolean).forEach(text => {
+    const span = document.createElement('span');
+    span.textContent = text;
+    box.appendChild(span);
+  });
 }
 
 function renderMetaItem(containerId, textId, value) {

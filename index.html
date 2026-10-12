@@ -118,7 +118,9 @@
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-2">
             <h1 id="fullName" class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 truncate"></h1>
-            <span id="hireableBadge" class="hidden text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/70 rounded-md">Open to work</span>
+            <span id="hireableBadge" data-i18n="badgeHireable" class="hidden text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/70 rounded-md">Open to work</span>
+            <span id="typeBadge" data-i18n="badgeOrg" class="hidden text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 bg-neutral-100 text-neutral-600 border border-neutral-200/70 rounded-md">Organization</span>
+            <span id="staffBadge" data-i18n="badgeStaff" class="hidden text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200/70 rounded-md">GitHub Staff</span>
           </div>
 
           <div class="flex flex-wrap items-center gap-2 mt-1">
@@ -159,6 +161,29 @@
         </div>
       </div>
 
+      <!-- 账号总览：由最近拉取的仓库列表聚合，不额外消耗 API 额度 -->
+      <div id="overviewBlock" class="pt-5 border-t border-neutral-100">
+        <div class="flex items-center justify-between gap-2 mb-3.5">
+          <h3 data-i18n="overviewTitle" class="text-xs font-semibold uppercase tracking-wider text-neutral-400">账号总览</h3>
+          <span id="overviewNote" class="text-[10px] text-neutral-400 whitespace-nowrap"></span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
+          <div>
+            <p data-i18n="ovLanguages" class="text-[11px] text-neutral-500 mb-2">语言分布</p>
+            <div id="ovLanguages" class="space-y-1.5"></div>
+          </div>
+          <div>
+            <p data-i18n="ovStars" class="text-[11px] text-neutral-500 mb-2">Star 排行</p>
+            <div id="ovStars" class="space-y-1.5"></div>
+          </div>
+          <div>
+            <p data-i18n="ovCreated" class="text-[11px] text-neutral-500 mb-2">每年新建仓库</p>
+            <div id="ovCreated" class="space-y-1.5"></div>
+          </div>
+        </div>
+        <div id="ovTotals" class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 text-[11px] text-neutral-500"></div>
+      </div>
+
       <!-- 附加元信息（公司、地点、博客、社交账号） -->
       <div id="metaGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs text-neutral-600">
         <div id="metaCompany" class="flex items-center gap-2 truncate">
@@ -174,8 +199,23 @@
           <a id="metaBlogLink" href="#" target="_blank" rel="noopener noreferrer" class="truncate hover:text-neutral-900 underline underline-offset-2"></a>
         </div>
         <div id="metaTwitter" class="flex items-center gap-2 truncate">
-          <i data-lucide="twitter" class="w-3.5 h-3.5 text-neutral-400 flex-shrink-0"></i>
+          <!-- Lucide 新版已移除品牌图标，这里用内联 X 官方矢量图 -->
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-3.5 h-3.5 text-neutral-400 flex-shrink-0">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
           <a id="metaTwitterLink" href="#" target="_blank" rel="noopener noreferrer" class="truncate hover:text-neutral-900"></a>
+        </div>
+        <div id="metaEmail" class="flex items-center gap-2 truncate">
+          <i data-lucide="mail" class="w-3.5 h-3.5 text-neutral-400 flex-shrink-0"></i>
+          <a id="metaEmailLink" href="#" class="truncate hover:text-neutral-900 underline underline-offset-2"></a>
+        </div>
+        <div id="metaUserId" class="flex items-center gap-2 truncate">
+          <i data-lucide="hash" class="w-3.5 h-3.5 text-neutral-400 flex-shrink-0"></i>
+          <span class="truncate" id="metaUserIdText"></span>
+        </div>
+        <div id="metaUpdatedAt" class="flex items-center gap-2 truncate">
+          <i data-lucide="history" class="w-3.5 h-3.5 text-neutral-400 flex-shrink-0"></i>
+          <span class="truncate" id="metaUpdatedAtText"></span>
         </div>
       </div>
 
