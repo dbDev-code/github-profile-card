@@ -147,6 +147,19 @@ function updateRateLimit(headers) {
   document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
 }
 
+// 打开页面时先取一次额度：/rate_limit 不计入调用次数
+async function loadRateLimit() {
+  try {
+    const res = await fetch('https://api.github.com/rate_limit', { headers: getHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const core = (data.resources && data.resources.core) || data.rate;
+    if (!core) return;
+    rateInfo = { remaining: core.remaining, limit: core.limit };
+    document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
+  } catch (e) { /* 拿不到就不显示，不影响查询 */ }
+}
+
 // 初始化 Lucide 图标
 function refreshIcons() {
   if (window.lucide) {
@@ -399,6 +412,7 @@ window.addEventListener('DOMContentLoaded', () => {
   applyI18n();
   renderHistory();
   refreshIcons();
+  loadRateLimit();
   const hashUser = window.location.hash.replace('#', '').trim();
   if (hashUser) {
     document.getElementById('usernameInput').value = hashUser;
