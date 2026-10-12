@@ -22,7 +22,7 @@
 - 📉 **剩余额度显示**：右上角实时显示 GitHub API 剩余调用次数，不用等报错才知道额度用尽。
 - 🔗 **URL Hash 分享**：通过 URL 后缀直达指定用户的名片，方便随时分享。
 - 🛡️ **API 限额保障**：支持在本地轻量配置 GitHub Token，突破未登录访问的 60 次/小时频次限制。
-- 🚀 **纯单文件（Zero-Build）**：基于原生 HTML/JS + Tailwind CSS CDN，无需打包构建，即开即用。
+- 🚀 **零构建（Zero-Build）**：原生 HTML/CSS/JS + Tailwind CSS CDN，代码按 `index.html` / `styles.css` / `app.js` 拆分，无需打包，即开即用。
 
 ### 🛠️ 技术栈
 
@@ -30,6 +30,14 @@
 - **Lucide Icons**
 - **Vanilla JavaScript** (ES6+)
 - **GitHub REST API v3**
+
+### 📁 文件结构
+
+```text
+index.html   页面结构与文案标记
+styles.css   全局基础样式
+app.js       多语言文案、查询逻辑、缓存与历史记录
+```
 
 ### 🚀 本地运行
 
@@ -74,7 +82,7 @@ A lightweight, modern GitHub profile card page with a warm paper-like look. Type
 - 📉 **Rate limit display**: the remaining GitHub API calls are shown in the header.
 - 🔗 **URL hash sharing**: share a profile with a URL suffix.
 - 🛡️ **API token support**: store a GitHub token locally to raise the limit from 60/hour to 5000/hour.
-- 🚀 **Zero-build single file**: plain HTML/JS plus Tailwind CSS via CDN, no bundler needed.
+- 🚀 **Zero-build**: plain HTML/CSS/JS plus Tailwind CSS via CDN, split into `index.html` / `styles.css` / `app.js`, no bundler needed.
 
 ### 🛠️ Tech stack
 
@@ -82,6 +90,14 @@ A lightweight, modern GitHub profile card page with a warm paper-like look. Type
 - **Lucide Icons**
 - **Vanilla JavaScript** (ES6+)
 - **GitHub REST API v3**
+
+### 📁 File layout
+
+```text
+index.html   page structure and i18n markers
+styles.css   global base styles
+app.js       i18n strings, lookup logic, cache and history
+```
 
 ### 🚀 Run locally
 
