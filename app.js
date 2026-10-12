@@ -6,6 +6,16 @@ const I18N = {
     searchBtn: '查看资料',
     loading: '正在解析 GitHub 数据...',
     recent: '最近查询',
+    clearHistory: '清空',
+    removeHistory: '删除这条记录',
+    tokenHint: '纯静态页面无法使用 OAuth（换 token 需要后端保管 client_secret），请创建一个不勾选任何权限的 Token —— 读取公开数据不需要权限，额度会从 60 次/小时提高到 5000 次/小时。',
+    tokenCreate: '打开 GitHub 创建 Token →',
+    tokenPlaceholder: '粘贴 Token（ghp_… / github_pat_…）',
+    tokenSave: '保存',
+    tokenClear: '清除',
+    tokenAnon: '当前：匿名（60 次/小时）',
+    tokenOk: '当前：已连接（{0} 次/小时）',
+    tokenInvalid: 'Token 无效，未保存',
     statRepos: '公开仓库',
     statFollowers: '关注者',
     statFollowing: '正在关注',
@@ -42,10 +52,7 @@ const I18N = {
     noRepos: '暂无可展示的公开仓库',
     errNotFound: '未找到用户 "{0}"，请核对用户名。',
     errRateLimit: '已达到 GitHub 匿名 API 访问频次上限（60次/小时），请点击右上角配置 API Token。',
-    errStatus: '获取数据异常（状态码：{0}）',
-    promptToken: '可填入 GitHub Personal Access Token 提升至 5000次/小时 额度（仅保存在您的本地浏览器中，留空则清除）：',
-    tokenSaved: 'Token 已妥善保存在本地！',
-    tokenCleared: '已恢复为默认匿名访问'
+    errStatus: '获取数据异常（状态码：{0}）'
   },
   en: {
     appTitle: 'GitHub Account Lookup',
@@ -53,6 +60,16 @@ const I18N = {
     searchBtn: 'View profile',
     loading: 'Fetching data from GitHub...',
     recent: 'Recent',
+    clearHistory: 'Clear',
+    removeHistory: 'Remove this entry',
+    tokenHint: 'A static page cannot use OAuth (exchanging the code requires a backend holding the client_secret). Create a token without any scopes — public data needs none — and your limit goes from 60/hour to 5000/hour.',
+    tokenCreate: 'Create a token on GitHub →',
+    tokenPlaceholder: 'Paste token (ghp_… / github_pat_…)',
+    tokenSave: 'Save',
+    tokenClear: 'Clear',
+    tokenAnon: 'Current: anonymous (60/hour)',
+    tokenOk: 'Current: connected ({0}/hour)',
+    tokenInvalid: 'Invalid token, not saved',
     statRepos: 'Public repos',
     statFollowers: 'Followers',
     statFollowing: 'Following',
@@ -89,10 +106,7 @@ const I18N = {
     noRepos: 'No public repositories to show',
     errNotFound: 'User "{0}" not found. Please check the username.',
     errRateLimit: 'GitHub anonymous API rate limit reached (60/hour). Add an API token at the top right.',
-    errStatus: 'Request failed (status code: {0})',
-    promptToken: 'Enter a GitHub Personal Access Token to raise the limit to 5000/hour (stored only in this browser, leave empty to clear):',
-    tokenSaved: 'Token saved locally!',
-    tokenCleared: 'Back to anonymous access'
+    errStatus: 'Request failed (status code: {0})'
   }
 };
 
@@ -116,8 +130,12 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.getElementById('langBtn').textContent = t('langBtn');
+  renderHistory(); // 历史标签上的 title 等文案要跟着切
   if (rateInfo) {
     document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
+  }
+  if (!document.getElementById('tokenPanel').classList.contains('hidden')) {
+    renderTokenStatus();
   }
   if (currentProfile) {
     renderProfile(currentProfile.user, currentProfile.repos);
@@ -130,29 +148,49 @@ function readHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch (e) { return []; }
 }
 
-function addHistory(username) {
-  const list = readHistory().filter(u => u.toLowerCase() !== username.toLowerCase());
-  list.unshift(username);
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 6))); } catch (e) {}
+function writeHistory(list) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) {}
   renderHistory();
 }
 
+function addHistory(username) {
+  const list = readHistory().filter(u => u.toLowerCase() !== username.toLowerCase());
+  list.unshift(username);
+  writeHistory(list.slice(0, 6));
+}
+
+// 渲染最近查询：点名字重查，点 ✕ 删除单条，"清空"清掉全部
 function renderHistory() {
   const list = readHistory();
   const chips = document.getElementById('historyChips');
   chips.innerHTML = '';
   list.forEach(name => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = name;
-    btn.className = 'text-xs text-neutral-500 hover:text-neutral-900 bg-neutral-50 hover:bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200/60 transition-colors';
-    btn.addEventListener('click', () => {
+    const chip = document.createElement('span');
+    chip.className = 'flex items-center gap-1 bg-neutral-50 border border-neutral-200/60 rounded-md pl-2 pr-1 py-0.5';
+
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'text-xs text-neutral-500 hover:text-neutral-900 transition-colors';
+    go.textContent = name;
+    go.addEventListener('click', () => {
       document.getElementById('usernameInput').value = name;
       fetchUserData(name);
     });
-    chips.appendChild(btn);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'text-[10px] leading-none text-neutral-300 hover:text-neutral-900 transition-colors px-0.5';
+    remove.textContent = '✕';
+    remove.title = t('removeHistory');
+    remove.addEventListener('click', () => {
+      writeHistory(readHistory().filter(u => u.toLowerCase() !== name.toLowerCase()));
+    });
+
+    chip.append(go, remove);
+    chips.appendChild(chip);
   });
   document.getElementById('historyBar').classList.toggle('hidden', list.length === 0);
+  document.getElementById('clearHistoryBtn').classList.toggle('hidden', list.length === 0);
 }
 
 // 缓存：5 分钟内同一个用户名不重复请求
@@ -179,17 +217,51 @@ function updateRateLimit(headers) {
   document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
 }
 
-// 打开页面时先取一次额度：/rate_limit 不计入调用次数
-async function loadRateLimit() {
+// 取一次额度：/rate_limit 不计入调用次数；失败返回 null
+async function fetchRateLimit() {
   try {
     const res = await fetch('https://api.github.com/rate_limit', { headers: getHeaders() });
-    if (!res.ok) return;
+    if (!res.ok) return null;
     const data = await res.json();
-    const core = (data.resources && data.resources.core) || data.rate;
-    if (!core) return;
-    rateInfo = { remaining: core.remaining, limit: core.limit };
-    document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
-  } catch (e) { /* 拿不到就不显示，不影响查询 */ }
+    return (data.resources && data.resources.core) || data.rate || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function loadRateLimit() {
+  const core = await fetchRateLimit();
+  if (!core) return;
+  rateInfo = { remaining: core.remaining, limit: core.limit };
+  document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
+}
+
+// Token 面板状态：由"是否存了 token + 已知额度"推导，切换语言时能重新翻译
+function renderTokenStatus(overrideText) {
+  const el = document.getElementById('tokenStatus');
+  if (typeof overrideText === 'string') {
+    el.textContent = overrideText;
+    return;
+  }
+  const hasToken = !!localStorage.getItem('gh_token');
+  el.textContent = hasToken
+    ? (rateInfo ? t('tokenOk', rateInfo.limit) : t('apiToken'))
+    : t('tokenAnon');
+}
+
+// 保存前先拿新 token 试一次 /rate_limit，无效就不留
+async function saveToken(value) {
+  if (!value) return;
+  localStorage.setItem('gh_token', value);
+  const core = await fetchRateLimit();
+  if (!core) {
+    localStorage.removeItem('gh_token');
+    renderTokenStatus(t('tokenInvalid'));
+    return;
+  }
+  rateInfo = { remaining: core.remaining, limit: core.limit };
+  document.getElementById('rateLimitText').textContent = t('rateLeft', rateInfo.remaining, rateInfo.limit);
+  renderTokenStatus();
 }
 
 // 初始化 Lucide 图标
@@ -545,19 +617,41 @@ document.getElementById('searchForm').addEventListener('submit', (e) => {
   if (val) fetchUserData(val);
 });
 
-// Token 设置提示框
+// Token 面板：打开/关闭、保存、清除
+const tokenPanel = document.getElementById('tokenPanel');
+const tokenInput = document.getElementById('tokenInput');
+
 document.getElementById('tokenBtn').addEventListener('click', () => {
-  const currentToken = localStorage.getItem('gh_token') || '';
-  const input = prompt(t('promptToken'), currentToken);
-  if (input !== null) {
-    if (input.trim() === '') {
-      localStorage.removeItem('gh_token');
-      alert(t('tokenCleared'));
-    } else {
-      localStorage.setItem('gh_token', input.trim());
-      alert(t('tokenSaved'));
-    }
+  const willShow = tokenPanel.classList.contains('hidden');
+  tokenPanel.classList.toggle('hidden', !willShow);
+  if (willShow) {
+    tokenInput.value = localStorage.getItem('gh_token') || '';
+    renderTokenStatus();
+    tokenInput.focus();
   }
+});
+
+document.getElementById('tokenSaveBtn').addEventListener('click', () => {
+  saveToken(tokenInput.value.trim());
+});
+
+document.getElementById('tokenClearBtn').addEventListener('click', () => {
+  localStorage.removeItem('gh_token');
+  tokenInput.value = '';
+  renderTokenStatus();
+  loadRateLimit();
+});
+
+// 点面板以外的地方收起它
+document.addEventListener('click', (e) => {
+  if (tokenPanel.classList.contains('hidden')) return;
+  if (tokenPanel.contains(e.target) || document.getElementById('tokenBtn').contains(e.target)) return;
+  tokenPanel.classList.add('hidden');
+});
+
+// 最近查询：清空
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  writeHistory([]);
 });
 
 // 语言切换
